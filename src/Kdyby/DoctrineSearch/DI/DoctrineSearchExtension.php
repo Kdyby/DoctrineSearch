@@ -54,7 +54,8 @@ class DoctrineSearchExtension extends Nette\DI\CompilerExtension
 		$builder->addDefinition($this->prefix('config'))
 			->setClass('Doctrine\Search\Configuration')
 			->addSetup('setMetadataCacheImpl', array(CacheHelpers::processCache($this, $config['metadataCache'], 'metadata', $config['debugger'])))
-			->addSetup('setEntitySerializer', array(new Nette\DI\Statement('Doctrine\Search\Serializer\CallbackSerializer')));
+			->addSetup('setEntitySerializer', array(new Nette\DI\Statement('Doctrine\Search\Serializer\CallbackSerializer')))
+			->addSetup('setEntityManager', array('@Doctrine\\ORM\\EntityManager'));
 
 		$builder->addDefinition($this->prefix('client'))
 			->setClass('Doctrine\Search\ElasticSearch\Client', array('@Elastica\Client'));
@@ -64,8 +65,7 @@ class DoctrineSearchExtension extends Nette\DI\CompilerExtension
 				$this->prefix('@config'),
 				$this->prefix('@client'),
 				// @eventManager
-			))
-			->addSetup('setEntityManager', array('@Doctrine\\ORM\\EntityManager'));
+			));
 	}
 
 
