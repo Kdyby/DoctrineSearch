@@ -1,0 +1,46 @@
+{
+	"name": "kdyby/doctrine-search",
+	"type": "library",
+	"description": "Integration of Doctrine Search and Elastica into Nette Framework",
+	"keywords": ["nette", "kdyby", "elasticsearch", "search", "elastic", "es", "doctrine", "orm"],
+	"homepage": "http://kdyby.org",
+	"license": ["BSD-3-Clause", "GPL-2.0", "GPL-3.0"],
+	"authors": [
+		{
+			"name": "Filip Procházka",
+			"homepage": "http://filip-prochazka.com",
+			"email": "filip@prochazka.su"
+		}
+	],
+	"support": {
+		"email": "filip@prochazka.su",
+		"issues": "https://github.com/Kdyby/ElasticSearch/issues"
+	},
+	"require": {
+		"nette/nette": "~2.1@dev",
+		"kdyby/doctrine-cache": "*",
+		"kdyby/elastic-search": "@dev",
+		"doctrine/orm": "~2.4",
+		"doctrine/search" : "@dev"
+	},
+	"suggest": {
+		"kdyby/console": "Great library for integrating the Symfony Console into Nette Framework",
+		"kdyby/doctrine": "Great library for integrating the Doctrine ORM into Nette Framework"
+	},
+	"require-dev": {
+		"kdyby/console": "*",
+		"kdyby/doctrine": "*",
+
+		"nette/tester": "@dev",
+		"jakub-onderka/php-parallel-lint": "~0.7"
+	},
+	"autoload": {
+		"psr-0": {
+			"Kdyby\\DoctrineSearch\\": "src/"
+		}
+	},
+	"repositories": [
+		{ "type": "vcs", "url": "https://github.com/fprochazka/doctrine-search.git" },
+		{ "type": "vcs", "url": "/home/hosiplan/develop/libs/kdyby/components/elastic-search" }
+	]
+}
