@@ -108,6 +108,10 @@ class DoctrineSearchExtension extends Nette\DI\CompilerExtension
 				$this->prefix('@client'),
 				// @eventManager
 			));
+
+		$builder->addDefinition($this->prefix('searchableListener'))
+			->setClass('Kdyby\DoctrineSearch\SearchableListener')
+			->addTag('kdyby.subscriber');
 	}
 
 
