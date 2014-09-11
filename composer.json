@@ -14,7 +14,7 @@
 	],
 	"support": {
 		"email": "filip@prochazka.su",
-		"issues": "https://github.com/Kdyby/ElasticSearch/issues"
+		"issues": "https://github.com/Kdyby/DoctrineSearch/issues"
 	},
 	"require": {
 		"nette/nette": "~2.1@dev",
@@ -43,7 +43,6 @@
 		]
 	},
 	"repositories": [
-		{ "type": "vcs", "url": "https://github.com/fprochazka/doctrine-search.git" },
-		{ "type": "vcs", "url": "/home/hosiplan/develop/libs/kdyby/components/elastic-search" }
+		{ "type": "vcs", "url": "https://github.com/fprochazka/doctrine-search.git" }
 	]
 }
