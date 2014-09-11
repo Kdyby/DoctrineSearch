@@ -106,7 +106,7 @@ class DoctrineSearchExtension extends Nette\DI\CompilerExtension
 			->setClass('Doctrine\Search\SearchManager', array(
 				$this->prefix('@config'),
 				$this->prefix('@client'),
-				// @eventManager
+				new Nette\DI\Statement('Doctrine\Common\EventManager') // todo: only temporary, must solve collision first
 			));
 
 		$builder->addDefinition($this->prefix('searchableListener'))
