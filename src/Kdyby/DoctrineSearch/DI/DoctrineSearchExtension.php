@@ -112,6 +112,14 @@ class DoctrineSearchExtension extends Nette\DI\CompilerExtension
 		$builder->addDefinition($this->prefix('searchableListener'))
 			->setClass('Kdyby\DoctrineSearch\SearchableListener')
 			->addTag('kdyby.subscriber');
+
+		$builder->addDefinition($this->prefix('console.createMapping'))
+			->setClass('Kdyby\DoctrineSearch\Console\CreateMappingCommand')
+			->addTag('kdyby.console.command');
+
+		$builder->addDefinition($this->prefix('console.pipeEntities'))
+			->setClass('Kdyby\DoctrineSearch\Console\PipeEntitiesCommand')
+			->addTag('kdyby.console.command');
 	}
 
 
