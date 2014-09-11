@@ -41,6 +41,7 @@ class DoctrineSearchExtension extends Nette\DI\CompilerExtension
 	 */
 	public $defaults = array(
 		'metadataCache' => 'default',
+		'serializer' => 'callback',
 		'debugger' => '%debugMode%',
 	);
 
@@ -51,11 +52,52 @@ class DoctrineSearchExtension extends Nette\DI\CompilerExtension
 		$builder = $this->getContainerBuilder();
 		$config = $this->getConfig($this->defaults);
 
-		$builder->addDefinition($this->prefix('config'))
+		$configuration = $builder->addDefinition($this->prefix('config'))
 			->setClass('Doctrine\Search\Configuration')
 			->addSetup('setMetadataCacheImpl', array(CacheHelpers::processCache($this, $config['metadataCache'], 'metadata', $config['debugger'])))
-			->addSetup('setEntitySerializer', array(new Nette\DI\Statement('Doctrine\Search\Serializer\CallbackSerializer')))
 			->addSetup('setEntityManager', array('@Doctrine\\ORM\\EntityManager'));
+
+		switch ($config['serializer']) {
+			case 'callback':
+				$serializer = new Nette\DI\Statement('Doctrine\Search\Serializer\CallbackSerializer');
+				break;
+
+			case 'jms':
+				$builder->addDefinition($this->prefix('jms.serializationBuilder'))
+					->setClass('JMS\Serializer\SerializerBuilder')
+					->addSetup('setPropertyNamingStrategy', array(
+						new Nette\DI\Statement('JMS\Serializer\Naming\SerializedNameAnnotationStrategy', array(
+							new Nette\DI\Statement('JMS\Serializer\Naming\IdenticalPropertyNamingStrategy')
+						))
+					))
+					->addSetup('addDefaultHandlers')
+					->addSetup('setAnnotationReader')
+					->setAutowired(FALSE);
+
+				$builder->addDefinition($this->prefix('jms.serializer'))
+					->setClass('JMS\Serializer\Serializer')
+					->setFactory($this->prefix('@jms.serializationBuilder::build'))
+					// todo: getMetadataFactory()->setCache()
+					->setAutowired(FALSE);
+
+				$builder->addDefinition($this->prefix('jms.serializerContext'))
+					->setClass('JMS\Serializer\SerializationContext')
+					->addSetup('setGroups', array('search'))
+					->setAutowired(FALSE);
+
+				$serializer = new Nette\DI\Statement('Kdyby\DoctrineSearch\Serializer\JMSSerializer', array(
+					$this->prefix('@jms.serializer'),
+					$this->prefix('@jms.serializerContext')
+				));
+				break;
+
+			default:
+				throw new Kdyby\DoctrineSearch\NotImplementedException(
+					sprintf('Serializer "%s" is not supported', $config['serializer'])
+				);
+		}
+
+		$configuration->addSetup('setEntitySerializer', array($serializer));
 
 		$builder->addDefinition($this->prefix('client'))
 			->setClass('Doctrine\Search\ElasticSearch\Client', array('@Elastica\Client'));

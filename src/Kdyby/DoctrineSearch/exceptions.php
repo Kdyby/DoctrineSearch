@@ -10,28 +10,18 @@
 
 namespace Kdyby\DoctrineSearch;
 
-use Kdyby;
-use Nette;
+
+interface Exception
+{
+
+}
 
 
 
 /**
- * @author Filip Procházka <filip@prochazka.su>
+ * The exception that is thrown when a requested method or operation is not implemented.
  */
-interface Searchable
+class NotImplementedException extends \LogicException implements Exception
 {
-
-//	/**
-//	 * @return array
-//	 */
-//	public function toArray();
-
-
-
-//	/**
-//	 * @param array $data
-//	 * @return void
-//	 */
-//	public function fromArray($data);
 
 }

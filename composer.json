@@ -37,7 +37,10 @@
 	"autoload": {
 		"psr-0": {
 			"Kdyby\\DoctrineSearch\\": "src/"
-		}
+		},
+		"classmap": [
+			"src/Kdyby/DoctrineSearch/exceptions.php"
+		]
 	},
 	"repositories": [
 		{ "type": "vcs", "url": "https://github.com/fprochazka/doctrine-search.git" },
