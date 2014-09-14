@@ -42,7 +42,16 @@ class DoctrineSearchExtension extends Nette\DI\CompilerExtension
 	public $defaults = array(
 		'metadataCache' => 'default',
 		'serializer' => 'callback',
+		'indexes' => array(),
 		'debugger' => '%debugMode%',
+	);
+
+	/**
+	 * @var array
+	 */
+	public $indexDefaults = array(
+		'analyzers' => array(),
+		'filters' => array(),
 	);
 
 
@@ -120,6 +129,47 @@ class DoctrineSearchExtension extends Nette\DI\CompilerExtension
 		$builder->addDefinition($this->prefix('console.pipeEntities'))
 			->setClass('Kdyby\DoctrineSearch\Console\PipeEntitiesCommand')
 			->addTag('kdyby.console.command');
+
+		$schema = $builder->addDefinition($this->prefix('schema'))
+			->setClass('Kdyby\DoctrineSearch\SchemaManager');
+
+		foreach ($config['indexes'] as $indexName => $indexConfig) {
+			$indexConfig = Config\Helpers::merge($indexConfig, $this->indexDefaults);
+
+			unset($analysisSection);
+			foreach ($indexConfig as $analysisType => &$analysisSection) {
+
+				unset($setup);
+				foreach ($analysisSection as $name => $setup) {
+					if (!Config\Helpers::isInheriting($setup)) {
+						continue;
+					}
+
+					$parent = Config\Helpers::takeParent($setup);
+
+					if (!isset($analysisSection[$parent])) {
+						throw new Nette\Utils\AssertionException(sprintf(
+							'The %s.%s cannot inherit undefined %s.%s in %s configuration',
+							$analysisType, $name, $analysisType, $parent, $this->name
+						));
+					}
+
+					$analysisSection[$name] = Config\Helpers::merge($setup, $analysisSection[$parent]);
+				}
+			}
+
+			if (!isset($indexConfig['analyzer'])) {
+				$indexConfig['analyzer'] = $indexConfig['analyzers'];
+				unset($indexConfig['analyzers']);
+			}
+
+			if (!isset($indexConfig['filter'])) {
+				$indexConfig['filter'] = $indexConfig['filters'];
+				unset($indexConfig['filters']);
+			}
+
+			$schema->addSetup('setIndexAnalysis', array($indexName, $indexConfig));
+		}
 	}
 
 
