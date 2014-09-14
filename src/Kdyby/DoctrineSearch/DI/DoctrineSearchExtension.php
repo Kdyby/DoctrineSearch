@@ -50,6 +50,7 @@ class DoctrineSearchExtension extends Nette\DI\CompilerExtension
 	 * @var array
 	 */
 	public $indexDefaults = array(
+		'char_filter' => array(),
 		'analyzers' => array(),
 		'filters' => array(),
 	);
