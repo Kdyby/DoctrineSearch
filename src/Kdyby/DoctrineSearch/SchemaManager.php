@@ -88,6 +88,11 @@ class SchemaManager extends Nette\Object
 				continue;
 			}
 
+			$index = $this->elastica->getIndex($class->index);
+			if (!$index->getType($class->type)->exists()) {
+				continue;
+			}
+
 			$this->client->deleteType($class);
 			$this->onTypeDropped($this, $class);
 		}
