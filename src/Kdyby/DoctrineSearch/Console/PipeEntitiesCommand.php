@@ -84,8 +84,7 @@ class PipeEntitiesCommand extends Command
 			$targetClass = $this->entityManager->getClassMetadata($assocMapping['targetEntity']);
 
 			$alias = substr($assocMapping['fieldName'], 0, 1) . ($i++);
-			$qb->leftJoin('e.' . $assocMapping['fieldName'], $alias)
-				->addSelect('partial ' . $alias . '.{' . implode(',', $targetClass->getIdentifierColumnNames()) . '}');
+			$qb->leftJoin('e.' . $assocMapping['fieldName'], $alias)->addSelect($alias);
 
 			// todo: deeper!
 		}
