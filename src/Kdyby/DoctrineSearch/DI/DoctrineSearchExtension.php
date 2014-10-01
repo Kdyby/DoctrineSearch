@@ -41,7 +41,8 @@ class DoctrineSearchExtension extends Nette\DI\CompilerExtension
 	 */
 	public $defaults = array(
 		'metadataCache' => 'default',
-		'serializer' => 'callback',
+		'defaultSerializer' => 'callback',
+		'serializers' => array(),
 		'indexes' => array(),
 		'debugger' => '%debugMode%',
 	);
@@ -67,7 +68,7 @@ class DoctrineSearchExtension extends Nette\DI\CompilerExtension
 			->addSetup('setMetadataCacheImpl', array(CacheHelpers::processCache($this, $config['metadataCache'], 'metadata', $config['debugger'])))
 			->addSetup('setEntityManager', array('@Doctrine\\ORM\\EntityManager'));
 
-		switch ($config['serializer']) {
+		switch ($config['defaultSerializer']) {
 			case 'callback':
 				$serializer = new Nette\DI\Statement('Doctrine\Search\Serializer\CallbackSerializer');
 				break;
@@ -103,11 +104,25 @@ class DoctrineSearchExtension extends Nette\DI\CompilerExtension
 
 			default:
 				throw new Kdyby\DoctrineSearch\NotImplementedException(
-					sprintf('Serializer "%s" is not supported', $config['serializer'])
+					sprintf('Serializer "%s" is not supported', $config['defaultSerializer'])
 				);
 		}
 
-		$configuration->addSetup('setEntitySerializer', array($serializer));
+		$serializer = $builder->addDefinition($this->prefix('serializer'))
+			->setClass('Kdyby\DoctrineSearch\Serializer\ChainSerializer')
+			->addSetup('setDefaultSerializer', array($serializer));
+
+		foreach ($config['serializers'] as $type => $impl) {
+			$args = Nette\DI\Compiler::filterArguments(array(is_string($impl) ? new Nette\DI\Statement($impl) : $impl));
+			$builder->addDefinition($this->prefix($name = 'serializer.' . str_replace('\\', '_', $type)))
+				->setFactory($args[0]->entity, $args[0]->arguments)
+				->setClass((is_string($args[0]->entity) && class_exists($args[0]->entity)) ? $args[0]->entity : 'Doctrine\Search\SerializerInterface')
+				->setAutowired(FALSE);
+
+			$serializer->addSetup('addSerializer', array($type, $this->prefix('@' . $name)));
+		}
+
+		$configuration->addSetup('setEntitySerializer', array($this->prefix('@serializer')));
 
 		$builder->addDefinition($this->prefix('client'))
 			->setClass('Doctrine\Search\ElasticSearch\Client', array('@Elastica\Client'));
