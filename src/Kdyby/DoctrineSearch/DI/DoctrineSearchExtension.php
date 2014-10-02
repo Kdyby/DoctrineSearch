@@ -68,6 +68,35 @@ class DoctrineSearchExtension extends Nette\DI\CompilerExtension
 			->addSetup('setMetadataCacheImpl', array(CacheHelpers::processCache($this, $config['metadataCache'], 'metadata', $config['debugger'])))
 			->addSetup('setEntityManager', array('@Doctrine\\ORM\\EntityManager'));
 
+		$this->loadSerializer($config);
+
+		$configuration->addSetup('setEntitySerializer', array($this->prefix('@serializer')));
+
+		$builder->addDefinition($this->prefix('client'))
+			->setClass('Doctrine\Search\ElasticSearch\Client', array('@Elastica\Client'));
+
+		$builder->addDefinition($this->prefix('manager'))
+			->setClass('Doctrine\Search\SearchManager', array(
+				$this->prefix('@config'),
+				$this->prefix('@client'),
+				new Nette\DI\Statement('Doctrine\Common\EventManager') // todo: only temporary, must solve collision first
+			));
+
+		$builder->addDefinition($this->prefix('searchableListener'))
+			->setClass('Kdyby\DoctrineSearch\SearchableListener')
+			->addTag('kdyby.subscriber');
+
+		$this->loadSchema($config);
+
+		$this->loadConsole();
+	}
+
+
+
+	protected function loadSerializer($config)
+	{
+		$builder = $this->getContainerBuilder();
+
 		switch ($config['defaultSerializer']) {
 			case 'callback':
 				$serializer = new Nette\DI\Statement('Doctrine\Search\Serializer\CallbackSerializer');
@@ -121,30 +150,13 @@ class DoctrineSearchExtension extends Nette\DI\CompilerExtension
 
 			$serializer->addSetup('addSerializer', array($type, $this->prefix('@' . $name)));
 		}
+	}
 
-		$configuration->addSetup('setEntitySerializer', array($this->prefix('@serializer')));
 
-		$builder->addDefinition($this->prefix('client'))
-			->setClass('Doctrine\Search\ElasticSearch\Client', array('@Elastica\Client'));
 
-		$builder->addDefinition($this->prefix('manager'))
-			->setClass('Doctrine\Search\SearchManager', array(
-				$this->prefix('@config'),
-				$this->prefix('@client'),
-				new Nette\DI\Statement('Doctrine\Common\EventManager') // todo: only temporary, must solve collision first
-			));
-
-		$builder->addDefinition($this->prefix('searchableListener'))
-			->setClass('Kdyby\DoctrineSearch\SearchableListener')
-			->addTag('kdyby.subscriber');
-
-		$builder->addDefinition($this->prefix('console.createMapping'))
-			->setClass('Kdyby\DoctrineSearch\Console\CreateMappingCommand')
-			->addTag('kdyby.console.command');
-
-		$builder->addDefinition($this->prefix('console.pipeEntities'))
-			->setClass('Kdyby\DoctrineSearch\Console\PipeEntitiesCommand')
-			->addTag('kdyby.console.command');
+	protected function loadSchema($config)
+	{
+		$builder = $this->getContainerBuilder();
 
 		$schema = $builder->addDefinition($this->prefix('schema'))
 			->setClass('Kdyby\DoctrineSearch\SchemaManager');
@@ -186,6 +198,21 @@ class DoctrineSearchExtension extends Nette\DI\CompilerExtension
 
 			$schema->addSetup('setIndexAnalysis', array($indexName, $indexConfig));
 		}
+	}
+
+
+
+	protected function loadConsole()
+	{
+		$builder = $this->getContainerBuilder();
+
+		$builder->addDefinition($this->prefix('console.createMapping'))
+			->setClass('Kdyby\DoctrineSearch\Console\CreateMappingCommand')
+			->addTag('kdyby.console.command');
+
+		$builder->addDefinition($this->prefix('console.pipeEntities'))
+			->setClass('Kdyby\DoctrineSearch\Console\PipeEntitiesCommand')
+			->addTag('kdyby.console.command');
 	}
 
 
