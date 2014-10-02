@@ -213,6 +213,10 @@ class DoctrineSearchExtension extends Nette\DI\CompilerExtension
 		$builder->addDefinition($this->prefix('console.pipeEntities'))
 			->setClass('Kdyby\DoctrineSearch\Console\PipeEntitiesCommand')
 			->addTag('kdyby.console.command');
+
+		$builder->addDefinition($this->prefix('console.info'))
+			->setClass('Kdyby\DoctrineSearch\Console\InfoCommand')
+			->addTag('kdyby.console.command');
 	}
 
 
