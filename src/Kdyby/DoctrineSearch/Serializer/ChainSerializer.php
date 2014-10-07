@@ -10,6 +10,7 @@
 
 namespace Kdyby\DoctrineSearch\Serializer;
 
+use Doctrine\Common\Util\ClassUtils;
 use Doctrine\Search\SerializerInterface;
 use Kdyby;
 use Nette;
@@ -54,7 +55,7 @@ class ChainSerializer extends Nette\Object implements SerializerInterface
      */
     public function serialize($object)
     {
-        $lName = strtolower(get_class($object));
+        $lName = strtolower(ClassUtils::getClass($object));
         if (isset($this->serializers[$lName])) {
             return $this->serializers[$lName]->serialize($object);
         }
