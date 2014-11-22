@@ -10,14 +10,25 @@
 
 namespace Kdyby\DoctrineSearch;
 
+use Doctrine\Search\Mapping\ClassMetadata;
 use Doctrine\Search\SearchManager;
+use Elastica\Exception\ResponseException;
+use Elastica\Request;
 use Kdyby;
 use Nette;
+use Tracy\Debugger;
 
 
 
 /**
  * @author Filip Procházka <filip@prochazka.su>
+ *
+ * @method onTypeDropped(SchemaManager $self, ClassMetadata $class)
+ * @method onIndexDropped(SchemaManager $self, string $indexName)
+ * @method onIndexCreated(SchemaManager $self, string $indexName)
+ * @method onTypeCreated(SchemaManager $self, ClassMetadata $class)
+ * @method onAliasCreated(SchemaManager $self, string $original, string $alias)
+ * @method onAliasError(SchemaManager $self, ResponseException $e, string $original, string $alias)
  */
 class SchemaManager extends Nette\Object
 {
@@ -36,6 +47,16 @@ class SchemaManager extends Nette\Object
 	 * @var array
 	 */
 	public $onIndexCreated = array();
+
+	/**
+	 * @var array
+	 */
+	public $onAliasCreated = array();
+
+	/**
+	 * @var array
+	 */
+	public $onAliasError = array();
 
 	/**
 	 * @var array
@@ -111,20 +132,55 @@ class SchemaManager extends Nette\Object
 
 	public function createMappings()
 	{
+		$aliases = [];
+
 		$metadataFactory = $this->searchManager->getMetadataFactory();
 		foreach ($metadataFactory->getAllMetadata() as $class) {
-			if (!$this->client->getIndex($class->index)->exists()) {
-				$this->client->createIndex($class->index, array(
-					'number_of_shards' => $class->numberOfShards,
-					'number_of_replicas' => $class->numberOfReplicas,
-					'analysis' => isset($this->indexAnalysis[$class->index]) ? $this->indexAnalysis[$class->index] : array(),
+			$indexAlias = $class->index . '_' . date('YmdHis');
+			$aliases[$indexAlias] = $class->index;
+
+			$fakeMetadata = clone $class;
+			$fakeMetadata->index = $indexAlias;
+
+			if (!$this->client->getIndex($fakeMetadata->index)->exists()) {
+				$this->client->createIndex($fakeMetadata->index, array(
+					'number_of_shards' => $fakeMetadata->numberOfShards,
+					'number_of_replicas' => $fakeMetadata->numberOfReplicas,
+					'analysis' => isset($this->indexAnalysis[$fakeMetadata->index]) ? $this->indexAnalysis[$fakeMetadata->index] : array(),
 				));
 
-				$this->onIndexCreated($this, $class->index);
+				$this->onIndexCreated($this, $fakeMetadata->index);
 			}
 
-			$this->client->createType($class);
-			$this->onTypeCreated($this, $class);
+			$this->client->createType($fakeMetadata);
+			$this->onTypeCreated($this, $fakeMetadata);
+		}
+
+		return $aliases;
+	}
+
+
+
+	public function createAliases(array $aliases)
+	{
+		foreach ($aliases as $alias => $original) {
+			try {
+				$this->elastica->request(sprintf('_all/_alias/%s', $original), Request::DELETE);
+
+			} catch (ResponseException $e) {
+				if (stripos($e->getMessage(), 'AliasesMissingException') === FALSE) {
+					throw $e;
+				}
+			}
+
+			try {
+				$this->elastica->request(sprintf('/%s/_alias/%s', $alias, $original), Request::PUT);
+				$this->onAliasCreated($this, $original, $alias);
+
+			} catch (ResponseException $e) {
+				Debugger::log($e);
+				$this->onAliasError($this, $e, $original, $alias);
+			}
 		}
 	}
 

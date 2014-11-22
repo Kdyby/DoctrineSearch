@@ -16,7 +16,9 @@ use Kdyby;
 use Nette;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Helper\ProgressBar;
+use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 
@@ -34,16 +36,18 @@ class PipeEntitiesCommand extends Command
 	public $searchManager;
 
 	/**
-	 * @var \Doctrine\ORM\EntityManager
+	 * @var \Kdyby\DoctrineSearch\EntityPiper
 	 * @inject
 	 */
-	public $entityManager;
+	public $entityPiper;
 
 
 
 	protected function configure()
 	{
-		$this->setName('elastica:pipe-entities');
+		$this->setName('elastica:pipe-entities')
+			->addArgument('index-aliases', InputArgument::IS_ARRAY, "Alias map of alias=original for indexes");
+
 		// todo: filter types, ...
 	}
 
@@ -54,76 +58,49 @@ class PipeEntitiesCommand extends Command
 		/** @var \Doctrine\Search\Mapping\ClassMetadata[] $classes */
 		$classes = $this->searchManager->getClassMetadataFactory()->getAllMetadata();
 
-		foreach ($classes as $class) {
-			$output->writeln(sprintf('Indexing <info>%s</info>', $class->getName()));
-			$this->indexEntities($class->getName(), $output);
+		/** @var ProgressBar $progress */
+		$progress = NULL;
+		$this->entityPiper->onIndexStart[] = function ($ep, Nette\Utils\Paginator $paginator) use ($output, &$progress) {
+			$progress = new ProgressBar($output, $paginator->getItemCount());
+			$progress->setFormat($progress::getFormatDefinition('debug'));
+			$progress->start();
+		};
+		$this->entityPiper->onItemsIndexed[] = function ($ep, $entities) use ($output, &$progress) {
+			$progress->advance(count($entities));
+		};
+
+		$aliases = array(/* original => alias */);
+		$indexAliases = $input->getArgument('index-aliases');
+		foreach ($indexAliases as $tmp) {
+			list($alias, $original) = explode('=', $tmp, 2);
+			$aliases[$original] = $alias;
 		}
 
-		$output->writeln('');
-		$output->writeln('<info>Finished!</info>');
-	}
+		foreach ($classes as $class) {
+			$output->writeln('');
+			$output->writeln(sprintf('Indexing <info>%s</info>', $class->getName()));
 
-
-
-	/**
-	 * @param string $className
-	 */
-	protected function indexEntities($className, OutputInterface $output)
-	{
-		$class = $this->entityManager->getClassMetadata($className);
-		$repository = $this->entityManager->getRepository($className);
-
-		$qb = $repository->createQueryBuilder('e');
-
-		$i = 0;
-		foreach ($class->getAssociationMappings() as $assocMapping) {
-			if (!$class->isSingleValuedAssociation($assocMapping['fieldName'])) {
-				continue;
+			if (isset($aliases[$class->index])) {
+				$output->writeln(sprintf('Redirecting data from <info>%s</info> to <info>%s</info>', $class->index, $aliases[$class->index]));
+				$class->index = $aliases[$class->index];
 			}
 
-			$targetClass = $this->entityManager->getClassMetadata($assocMapping['targetEntity']);
-
-			$alias = substr($assocMapping['fieldName'], 0, 1) . ($i++);
-			$qb->leftJoin('e.' . $assocMapping['fieldName'], $alias)->addSelect($alias);
-
-			// todo: deeper!
-		}
-
-		$countQuery = $repository->createQueryBuilder('e')
-			->select('COUNT(e)')
-			->getQuery();
-
-		$paginator = new Nette\Utils\Paginator();
-		$paginator->itemsPerPage = 100;
-		$paginator->itemCount = $countQuery->getSingleScalarResult();
-
-		$progress = new ProgressBar($output, $paginator->getItemCount());
-		$progress->setFormat($progress::getFormatDefinition('debug'));
-		$progress->start();
-
-		$query = $qb->getQuery()->setMaxResults($paginator->getLength());
-		while (1) {
-			$entities = $query->setFirstResult($paginator->getOffset())->getResult();
-
-			$this->searchManager->persist($entities);
-			$this->searchManager->flush();
-			$this->searchManager->clear();
-
+			unset($e);
 			try {
-				$progress->advance(count($entities));
+				$this->entityPiper->indexEntities($class);
+
 			} catch (\Exception $e) { }
 
-			$this->entityManager->clear();
+			// fix the metadata
+			$class->index = array_search($class->index, $aliases, TRUE);
 
-			if ($paginator->isLast()) {
-				break;
+			if (isset($e)) {
+				throw $e;
 			}
 
-			$paginator->page += 1;
+			$progress->finish();
+			$output->writeln('');
 		}
-
-		$progress->finish();
-		$output->writeln('');
 	}
 
 }

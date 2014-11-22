@@ -88,6 +88,9 @@ class DoctrineSearchExtension extends Nette\DI\CompilerExtension
 
 		$this->loadSchema($config);
 
+		$builder->addDefinition($this->prefix('entityPiper'))
+			->setClass('Kdyby\DoctrineSearch\EntityPiper');
+
 		$this->loadConsole();
 	}
 

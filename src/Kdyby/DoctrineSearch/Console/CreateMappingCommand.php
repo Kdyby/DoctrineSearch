@@ -11,9 +11,11 @@
 namespace Kdyby\DoctrineSearch\Console;
 
 use Doctrine\Search\Mapping\ClassMetadata;
+use Elastica\Exception\ResponseException;
 use Kdyby;
 use Nette;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -38,6 +40,7 @@ class CreateMappingCommand extends Command
 	{
 		$this->setName('elastica:mapping:create')
 			->setDescription("Creates indexes and type mappings in ElasticSearch")
+			->addOption('init-data', 'i', InputOption::VALUE_NONE, "Should the newly created index also be populated with current data?")
 			->addOption('drop-before', 'd', InputOption::VALUE_NONE, "Should the indexes be dropped first, before they're created? WARNING: this drops data!");
 
 		// todo: filtering to only one type at a time
@@ -45,14 +48,10 @@ class CreateMappingCommand extends Command
 
 
 
-	protected function execute(InputInterface $input, OutputInterface $output)
+	protected function initialize(InputInterface $input, OutputInterface $output)
 	{
-		$this->schema->onIndexCreated[] = function ($sm, $index) use ($output) {
-			$output->writeln(sprintf('Created index <info>%s</info>', $index));
-		};
-		$this->schema->onTypeCreated[] = function ($sm, ClassMetadata $type) use ($output) {
-			$output->writeln(sprintf('Created type <info>%s</info>', $type->getName()));
-		};
+		parent::initialize($input, $output);
+
 		$this->schema->onIndexDropped[] = function ($sm, $index) use ($output) {
 			$output->writeln(sprintf('<error>Dropped</error> index <info>%s</info>', $index));
 		};
@@ -60,11 +59,51 @@ class CreateMappingCommand extends Command
 			$output->writeln(sprintf('<error>Dropped</error> type <info>%s</info>', $type->getName()));
 		};
 
+		$this->schema->onIndexCreated[] = function ($sm, $index) use ($output) {
+			$output->writeln(sprintf('Created index <info>%s</info>', $index));
+		};
+		$this->schema->onTypeCreated[] = function ($sm, ClassMetadata $type) use ($output) {
+			$output->writeln(sprintf('Created type <info>%s</info>', $type->getName()));
+		};
+
+		$this->schema->onAliasCreated[] = function ($sm, $original, $alias) use ($output) {
+			$output->writeln(sprintf('Created alias <info>%s</info> for index <info>%s</info>', $alias, $original));
+		};
+		$this->schema->onAliasError[] = function ($sm, ResponseException $e, $original, $alias) use ($output) {
+			$output->writeln(sprintf('<error>%s</error>', $e->getMessage()));
+		};
+	}
+
+
+
+	protected function execute(InputInterface $input, OutputInterface $output)
+	{
 		if ($input->getOption('drop-before')) {
 			$this->schema->dropMappings();
 		}
 
-		$this->schema->createMappings();
+		$aliases = $this->schema->createMappings();
+
+		if ($input->getOption('init-data')) {
+			$indexAliases = array();
+			foreach ($aliases as $alias => $original) {
+				$indexAliases[] = $alias . '=' . $original;
+			}
+
+			$exitCode = $this->getApplication()->doRun(new ArrayInput(array(
+				'elastica:pipe-entities',
+				'index-aliases' => $indexAliases
+			)), $output);
+
+			if ($exitCode !== 0) {
+				return 1;
+			}
+		}
+
+		$output->writeln('');
+		$this->schema->createAliases($aliases);
+
+		return 0;
 	}
 
 }
