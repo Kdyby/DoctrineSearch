@@ -75,11 +75,15 @@ class DoctrineSearchExtension extends Nette\DI\CompilerExtension
 		$builder->addDefinition($this->prefix('client'))
 			->setClass('Doctrine\Search\ElasticSearch\Client', array('@Elastica\Client'));
 
+		$builder->addDefinition($this->prefix('evm'))
+			->setClass('Kdyby\Events\NamespacedEventManager', array(Kdyby\DoctrineSearch\Events::NS . '::'))
+			->setAutowired(FALSE);
+
 		$builder->addDefinition($this->prefix('manager'))
 			->setClass('Doctrine\Search\SearchManager', array(
 				$this->prefix('@config'),
 				$this->prefix('@client'),
-				new Nette\DI\Statement('Doctrine\Common\EventManager') // todo: only temporary, must solve collision first
+				$this->prefix('@evm'),
 			));
 
 		$builder->addDefinition($this->prefix('searchableListener'))
