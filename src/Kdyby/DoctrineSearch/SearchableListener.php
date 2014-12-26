@@ -46,10 +46,10 @@ class SearchableListener extends Nette\Object implements EventSubscriber
 	public function getSubscribedEvents()
 	{
 		return array(
-			\Doctrine\ORM\Events::prePersist,
-			\Doctrine\ORM\Events::preUpdate,
-			\Doctrine\ORM\Events::preRemove,
-			\Doctrine\ORM\Events::postFlush,
+			Events::prePersist,
+			Events::preUpdate,
+			Events::preRemove,
+			Events::postFlush,
 		);
 	}
 
