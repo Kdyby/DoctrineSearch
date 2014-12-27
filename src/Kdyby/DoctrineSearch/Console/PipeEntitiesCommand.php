@@ -80,9 +80,9 @@ class PipeEntitiesCommand extends Command
 			$output->writeln('');
 			$output->writeln(sprintf('Indexing <info>%s</info>', $class->getName()));
 
-			if (isset($aliases[$class->index])) {
-				$output->writeln(sprintf('Redirecting data from <info>%s</info> to <info>%s</info>', $class->index, $aliases[$class->index]));
-				$class->index = $aliases[$class->index];
+			if (isset($aliases[$class->getIndexName()])) {
+				$output->writeln(sprintf('Redirecting data from <info>%s</info> to <info>%s</info>', $class->index, $aliases[$class->getIndexName()]));
+				$class->index->name = $aliases[$class->getIndexName()];
 			}
 
 			unset($e);
@@ -92,7 +92,7 @@ class PipeEntitiesCommand extends Command
 			} catch (\Exception $e) { }
 
 			// fix the metadata
-			$class->index = array_search($class->index, $aliases, TRUE);
+			$class->index->name = array_search($class->getIndexName(), $aliases, TRUE);
 
 			if (isset($e)) {
 				throw $e;

@@ -10,9 +10,7 @@
 
 namespace Kdyby\DoctrineSearch;
 
-use Doctrine\Common\EventSubscriber;
-use Doctrine\ORM\Event\LifecycleEventArgs;
-use Doctrine\Search\SearchManager;
+use Doctrine;
 use Kdyby;
 use Nette;
 
@@ -21,63 +19,17 @@ use Nette;
 /**
  * @author Filip Procházka <filip@prochazka.su>
  */
-class SearchableListener extends Nette\Object implements EventSubscriber
+class SearchableListener extends Doctrine\Search\SearchableListener
 {
 
-	/**
-	 * @var SearchManager
-	 */
-	private $sm;
-
-
-
-	public function __construct(SearchManager $sm)
-	{
-		$this->sm = $sm;
-	}
-
-
-
-	/**
-	 * Returns an array of events this subscriber wants to listen to.
-	 *
-	 * @return array
-	 */
 	public function getSubscribedEvents()
 	{
 		return array(
 			Kdyby\Doctrine\Events::prePersist => 'prePersist',
 			Kdyby\Doctrine\Events::preUpdate => 'prePersist',
-			Kdyby\Doctrine\Events::preRemove,
-			Kdyby\Doctrine\Events::postFlush,
+			Kdyby\Doctrine\Events::preRemove => 'preRemove',
+			Kdyby\Doctrine\Events::postFlush => 'postFlush',
 		);
-	}
-
-
-
-	public function prePersist(LifecycleEventArgs $oArgs)
-	{
-		$oEntity = $oArgs->getEntity();
-		if ($oEntity instanceof Searchable) {
-			$this->sm->persist($oEntity);
-		}
-	}
-
-
-
-	public function preRemove(LifecycleEventArgs $oArgs)
-	{
-		$oEntity = $oArgs->getEntity();
-		if ($oEntity instanceof Searchable) {
-			$this->sm->remove($oEntity);
-		}
-	}
-
-
-
-	public function postFlush()
-	{
-		$this->sm->flush();
 	}
 
 }

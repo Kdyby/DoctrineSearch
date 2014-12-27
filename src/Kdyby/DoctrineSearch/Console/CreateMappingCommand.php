@@ -34,6 +34,12 @@ class CreateMappingCommand extends Command
 	 */
 	public $schema;
 
+	/**
+	 * @var \Doctrine\Search\SearchManager
+	 * @inject
+	 */
+	public $searchManager;
+
 
 
 	protected function configure()
@@ -78,11 +84,14 @@ class CreateMappingCommand extends Command
 
 	protected function execute(InputInterface $input, OutputInterface $output)
 	{
+		$metadataFactory = $this->searchManager->getClassMetadataFactory();
+		$classes = $metadataFactory->getAllMetadata();
+
 		if ($input->getOption('drop-before')) {
-			$this->schema->dropMappings();
+			$this->schema->dropMappings($classes);
 		}
 
-		$aliases = $this->schema->createMappings();
+		$aliases = $this->schema->createMappings($classes, TRUE);
 
 		if ($input->getOption('init-data')) {
 			$indexAliases = array();

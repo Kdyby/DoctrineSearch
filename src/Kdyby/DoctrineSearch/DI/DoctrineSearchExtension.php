@@ -66,11 +66,26 @@ class DoctrineSearchExtension extends Nette\DI\CompilerExtension
 		$configuration = $builder->addDefinition($this->prefix('config'))
 			->setClass('Doctrine\Search\Configuration')
 			->addSetup('setMetadataCacheImpl', array(CacheHelpers::processCache($this, $config['metadataCache'], 'metadata', $config['debugger'])))
-			->addSetup('setEntityManager', array('@Doctrine\\ORM\\EntityManager'));
+			->addSetup('setObjectManager', array('@Doctrine\\ORM\\EntityManager'));
 
 		$this->loadSerializer($config);
-
 		$configuration->addSetup('setEntitySerializer', array($this->prefix('@serializer')));
+
+		$builder->addDefinition($this->prefix('driver'))
+			->setClass('Doctrine\Search\Mapping\Driver\DependentMappingDriver', array($this->prefix('@driverChain')))
+			->setAutowired(FALSE);
+		$configuration->addSetup('setMetadataDriverImpl', array($this->prefix('@driver')));
+
+		$metadataDriverChain = $builder->addDefinition($this->prefix('driverChain'))
+			->setClass('Doctrine\Common\Persistence\Mapping\Driver\MappingDriverChain')
+			->setAutowired(FALSE);
+
+		foreach ($config['metadata'] as $namespace => $directory) {
+			$metadataDriverChain->addSetup('addDriver', array(
+				new Nette\DI\Statement('Doctrine\Search\Mapping\Driver\NeonDriver', array($directory)),
+				$namespace
+			));
+		}
 
 		$builder->addDefinition($this->prefix('client'))
 			->setClass('Doctrine\Search\ElasticSearch\Client', array('@Elastica\Client'));
@@ -87,10 +102,11 @@ class DoctrineSearchExtension extends Nette\DI\CompilerExtension
 			));
 
 		$builder->addDefinition($this->prefix('searchableListener'))
-			->setClass('Kdyby\DoctrineSearch\SearchableListener')
+			->setClass('Doctrine\Search\SearchableListener')
 			->addTag('kdyby.subscriber');
 
-		$this->loadSchema($config);
+		$builder->addDefinition($this->prefix('schema'))
+			->setClass('Kdyby\DoctrineSearch\SchemaManager', array($this->prefix('@client')));
 
 		$builder->addDefinition($this->prefix('entityPiper'))
 			->setClass('Kdyby\DoctrineSearch\EntityPiper');
@@ -132,7 +148,7 @@ class DoctrineSearchExtension extends Nette\DI\CompilerExtension
 					->addSetup('setGroups', array('search'))
 					->setAutowired(FALSE);
 
-				$serializer = new Nette\DI\Statement('Kdyby\DoctrineSearch\Serializer\JMSSerializer', array(
+				$serializer = new Nette\DI\Statement('Doctrine\Search\Serializer\JMSSerializer', array(
 					$this->prefix('@jms.serializer'),
 					$this->prefix('@jms.serializerContext')
 				));
@@ -145,7 +161,7 @@ class DoctrineSearchExtension extends Nette\DI\CompilerExtension
 		}
 
 		$serializer = $builder->addDefinition($this->prefix('serializer'))
-			->setClass('Kdyby\DoctrineSearch\Serializer\ChainSerializer')
+			->setClass('Doctrine\Search\Serializer\ChainSerializer')
 			->addSetup('setDefaultSerializer', array($serializer));
 
 		foreach ($config['serializers'] as $type => $impl) {
@@ -156,54 +172,6 @@ class DoctrineSearchExtension extends Nette\DI\CompilerExtension
 				->setAutowired(FALSE);
 
 			$serializer->addSetup('addSerializer', array($type, $this->prefix('@' . $name)));
-		}
-	}
-
-
-
-	protected function loadSchema($config)
-	{
-		$builder = $this->getContainerBuilder();
-
-		$schema = $builder->addDefinition($this->prefix('schema'))
-			->setClass('Kdyby\DoctrineSearch\SchemaManager');
-
-		foreach ($config['indexes'] as $indexName => $indexConfig) {
-			$indexConfig = Config\Helpers::merge($indexConfig, $this->indexDefaults);
-
-			unset($analysisSection);
-			foreach ($indexConfig as $analysisType => &$analysisSection) {
-
-				unset($setup);
-				foreach ($analysisSection as $name => $setup) {
-					if (!Config\Helpers::isInheriting($setup)) {
-						continue;
-					}
-
-					$parent = Config\Helpers::takeParent($setup);
-
-					if (!isset($analysisSection[$parent])) {
-						throw new Nette\Utils\AssertionException(sprintf(
-							'The %s.%s cannot inherit undefined %s.%s in %s configuration',
-							$analysisType, $name, $analysisType, $parent, $this->name
-						));
-					}
-
-					$analysisSection[$name] = Config\Helpers::merge($setup, $analysisSection[$parent]);
-				}
-			}
-
-			if (!isset($indexConfig['analyzer'])) {
-				$indexConfig['analyzer'] = $indexConfig['analyzers'];
-				unset($indexConfig['analyzers']);
-			}
-
-			if (!isset($indexConfig['filter'])) {
-				$indexConfig['filter'] = $indexConfig['filters'];
-				unset($indexConfig['filters']);
-			}
-
-			$schema->addSetup('setIndexAnalysis', array($indexName, $indexConfig));
 		}
 	}
 

@@ -25,9 +25,3 @@ class NotImplementedException extends \LogicException implements Exception
 {
 
 }
-
-
-class DefaultSerializerNotProvidedException extends \LogicException implements Exception
-{
-
-}

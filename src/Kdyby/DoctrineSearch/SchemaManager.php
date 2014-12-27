@@ -10,8 +10,9 @@
 
 namespace Kdyby\DoctrineSearch;
 
+use Doctrine;
 use Doctrine\Search\Mapping\ClassMetadata;
-use Doctrine\Search\SearchManager;
+use Doctrine\Search\Mapping\TypeMetadata;
 use Elastica\Exception\ResponseException;
 use Elastica\Request;
 use Kdyby;
@@ -30,7 +31,7 @@ use Tracy\Debugger;
  * @method onAliasCreated(SchemaManager $self, string $original, string $alias)
  * @method onAliasError(SchemaManager $self, ResponseException $e, string $original, string $alias)
  */
-class SchemaManager extends Nette\Object
+class SchemaManager extends Doctrine\Search\ElasticSearch\SchemaManager
 {
 
 	/**
@@ -63,124 +64,53 @@ class SchemaManager extends Nette\Object
 	 */
 	public $onTypeCreated = array();
 
-	/**
-	 * @var SearchManager
-	 */
-	private $searchManager;
-
-	/**
-	 * @var \Doctrine\Search\ElasticSearch\Client
-	 */
-	private $client;
-
-	/**
-	 * @var \Elastica\Client
-	 */
-	private $elastica;
-
-	/**
-	 * @var array
-	 */
-	private $indexAnalysis = array();
 
 
-
-	public function __construct(SearchManager $searchManager)
+	public function createIndex(ClassMetadata $class)
 	{
-		$this->searchManager = $searchManager;
-		$this->client = $this->searchManager->getClient();
-		$this->elastica = $this->client->getClient();
+		$result = parent::createIndex($class);
+		$this->onIndexCreated($this, $class->getIndexName());
+		return $result;
 	}
 
 
 
-	public function setIndexAnalysis($indexName, array $analysis)
+	public function dropIndex($index)
 	{
-		$this->indexAnalysis[$indexName] = $analysis + array('analyzer' => array(), 'filter' => array());
+		$result = parent::dropIndex($index);
+		$this->onIndexDropped($this, $index);
+		return $result;
 	}
 
 
 
-	public function dropMappings()
+	public function createType(ClassMetadata $class)
 	{
-		$metadataFactory = $this->searchManager->getMetadataFactory();
-		foreach ($metadataFactory->getAllMetadata() as $class) {
-			if (!$this->client->getIndex($class->index)->exists()) {
-				continue;
-			}
-
-			$index = $this->elastica->getIndex($class->index);
-			if (!$index->getType($class->type)->exists()) {
-				continue;
-			}
-
-			$this->client->deleteType($class);
-			$this->onTypeDropped($this, $class);
-		}
-
-		foreach ($metadataFactory->getAllMetadata() as $class) {
-			if (!$this->client->getIndex($class->index)->exists()) {
-				continue;
-			}
-
-			$this->client->deleteIndex($class->index);
-			$this->onIndexDropped($this, $class->index);
-		}
+		$result = parent::createType($class);
+		$this->onTypeCreated($this, $class);
+		return $result;
 	}
 
 
 
-	public function createMappings()
+	public function dropType(ClassMetadata $class)
 	{
-		$aliases = [];
-
-		$metadataFactory = $this->searchManager->getMetadataFactory();
-		foreach ($metadataFactory->getAllMetadata() as $class) {
-			$indexAlias = $class->index . '_' . date('YmdHis');
-			$aliases[$indexAlias] = $class->index;
-
-			$fakeMetadata = clone $class;
-			$fakeMetadata->index = $indexAlias;
-
-			if (!$this->client->getIndex($fakeMetadata->index)->exists()) {
-				$this->client->createIndex($fakeMetadata->index, array(
-					'number_of_shards' => $fakeMetadata->numberOfShards,
-					'number_of_replicas' => $fakeMetadata->numberOfReplicas,
-					'analysis' => isset($this->indexAnalysis[$fakeMetadata->index]) ? $this->indexAnalysis[$fakeMetadata->index] : array(),
-				));
-
-				$this->onIndexCreated($this, $fakeMetadata->index);
-			}
-
-			$this->client->createType($fakeMetadata);
-			$this->onTypeCreated($this, $fakeMetadata);
-		}
-
-		return $aliases;
+		$result = parent::dropType($class);
+		$this->onTypeDropped($this, $class);
+		return $result;
 	}
 
 
 
-	public function createAliases(array $aliases)
+	public function createAlias($alias, $original)
 	{
-		foreach ($aliases as $alias => $original) {
-			try {
-				$this->elastica->request(sprintf('_all/_alias/%s', $original), Request::DELETE);
+		try {
+			parent::createAlias($alias, $original);
+			$this->onAliasCreated($this, $original, $alias);
 
-			} catch (ResponseException $e) {
-				if (stripos($e->getMessage(), 'AliasesMissingException') === FALSE) {
-					throw $e;
-				}
-			}
-
-			try {
-				$this->elastica->request(sprintf('/%s/_alias/%s', $alias, $original), Request::PUT);
-				$this->onAliasCreated($this, $original, $alias);
-
-			} catch (ResponseException $e) {
-				Debugger::log($e);
-				$this->onAliasError($this, $e, $original, $alias);
-			}
+		} catch (\Exception $e) {
+			$this->onAliasError($this, $e, $original, $alias);
+			throw $e;
 		}
 	}
 
