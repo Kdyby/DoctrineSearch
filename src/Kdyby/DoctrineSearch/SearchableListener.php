@@ -46,26 +46,16 @@ class SearchableListener extends Nette\Object implements EventSubscriber
 	public function getSubscribedEvents()
 	{
 		return array(
-			Events::prePersist,
-			Events::preUpdate,
-			Events::preRemove,
-			Events::postFlush,
+			Kdyby\Doctrine\Events::prePersist => 'prePersist',
+			Kdyby\Doctrine\Events::preUpdate => 'prePersist',
+			Kdyby\Doctrine\Events::preRemove,
+			Kdyby\Doctrine\Events::postFlush,
 		);
 	}
 
 
 
 	public function prePersist(LifecycleEventArgs $oArgs)
-	{
-		$oEntity = $oArgs->getEntity();
-		if ($oEntity instanceof Searchable) {
-			$this->sm->persist($oEntity);
-		}
-	}
-
-
-
-	public function preUpdate(LifecycleEventArgs $oArgs)
 	{
 		$oEntity = $oArgs->getEntity();
 		if ($oEntity instanceof Searchable) {
