@@ -43,17 +43,8 @@ class DoctrineSearchExtension extends Nette\DI\CompilerExtension
 		'metadataCache' => 'default',
 		'defaultSerializer' => 'callback',
 		'serializers' => array(),
-		'indexes' => array(),
+		'metadata' => array(),
 		'debugger' => '%debugMode%',
-	);
-
-	/**
-	 * @var array
-	 */
-	public $indexDefaults = array(
-		'char_filter' => array(),
-		'analyzers' => array(),
-		'filters' => array(),
 	);
 
 
