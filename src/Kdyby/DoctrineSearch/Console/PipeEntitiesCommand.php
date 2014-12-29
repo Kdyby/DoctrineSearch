@@ -81,7 +81,7 @@ class PipeEntitiesCommand extends Command
 			$output->writeln(sprintf('Indexing <info>%s</info>', $class->getName()));
 
 			if (isset($aliases[$class->getIndexName()])) {
-				$output->writeln(sprintf('Redirecting data from <info>%s</info> to <info>%s</info>', $class->index, $aliases[$class->getIndexName()]));
+				$output->writeln(sprintf('Redirecting data from <info>%s</info> to <info>%s</info>', $class->getIndexName(), $aliases[$class->getIndexName()]));
 				$class->index->name = $aliases[$class->getIndexName()];
 			}
 
