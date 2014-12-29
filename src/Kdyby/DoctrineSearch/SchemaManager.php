@@ -12,12 +12,10 @@ namespace Kdyby\DoctrineSearch;
 
 use Doctrine;
 use Doctrine\Search\Mapping\ClassMetadata;
-use Doctrine\Search\Mapping\TypeMetadata;
 use Elastica\Exception\ResponseException;
-use Elastica\Request;
 use Kdyby;
 use Nette;
-use Tracy\Debugger;
+use Nette\Utils\ObjectMixin;
 
 
 
@@ -112,6 +110,26 @@ class SchemaManager extends Doctrine\Search\ElasticSearch\SchemaManager
 			$this->onAliasError($this, $e, $original, $alias);
 			throw $e;
 		}
+	}
+
+
+
+	/*************************** Nette\Object ***************************/
+
+
+
+	/**
+	 * Call to undefined method.
+	 *
+	 * @param string $name
+	 * @param array $args
+	 *
+	 * @throws \Nette\MemberAccessException
+	 * @return mixed
+	 */
+	public function __call($name, $args)
+	{
+		return ObjectMixin::call($this, $name, $args);
 	}
 
 }
