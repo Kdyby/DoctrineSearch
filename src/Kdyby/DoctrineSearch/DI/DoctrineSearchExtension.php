@@ -93,7 +93,7 @@ class DoctrineSearchExtension extends Nette\DI\CompilerExtension
 			));
 
 		$builder->addDefinition($this->prefix('searchableListener'))
-			->setClass('Doctrine\Search\SearchableListener')
+			->setClass('Kdyby\DoctrineSearch\SearchableListener')
 			->addTag('kdyby.subscriber');
 
 		$builder->addDefinition($this->prefix('schema'))

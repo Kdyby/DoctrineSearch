@@ -19,7 +19,7 @@ use Nette;
 /**
  * @author Filip Procházka <filip@prochazka.su>
  */
-class SearchableListener extends Doctrine\Search\SearchableListener
+class SearchableListener extends Doctrine\Search\Tools\OrmSearchableListener
 {
 
 	public function getSubscribedEvents()
