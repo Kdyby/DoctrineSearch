@@ -92,7 +92,9 @@ class PipeEntitiesCommand extends Command
 			} catch (\Exception $e) { }
 
 			// fix the metadata
-			$class->index->name = array_search($class->getIndexName(), $aliases, TRUE);
+			if ($old = array_search($class->getIndexName(), $aliases, TRUE)) {
+				$class->index->name = $old;
+			}
 
 			if (isset($e)) {
 				throw $e;
