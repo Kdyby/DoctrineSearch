@@ -61,6 +61,11 @@ class EntityPiper extends Nette\Object
 		$class = $this->entityManager->getClassMetadata($searchMeta->getName());
 		$repository = $this->entityManager->getRepository($searchMeta->getName());
 
+		// disable logger
+		$config = $this->entityManager->getConfiguration();
+		$oldLogger = $config->getSQLLogger();
+		$config->setSQLLogger(NULL);
+
 		$qb = $repository->createQueryBuilder('e');
 
 		$i = 0;
@@ -107,6 +112,8 @@ class EntityPiper extends Nette\Object
 
 			$paginator->page += 1;
 		}
+
+		$config->setSQLLogger($oldLogger);
 	}
 
 }
