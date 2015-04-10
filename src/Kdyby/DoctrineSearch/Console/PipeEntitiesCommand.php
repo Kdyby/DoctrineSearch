@@ -46,6 +46,7 @@ class PipeEntitiesCommand extends Command
 	protected function configure()
 	{
 		$this->setName('elastica:pipe-entities')
+			->addOption('entity', 'e', InputOption::VALUE_OPTIONAL, "Synchronizes only specified entity")
 			->addArgument('index-aliases', InputArgument::IS_ARRAY, "Alias map of alias=original for indexes");
 
 		// todo: filter types, ...
@@ -55,8 +56,15 @@ class PipeEntitiesCommand extends Command
 
 	protected function execute(InputInterface $input, OutputInterface $output)
 	{
+		$metaFactory = $this->searchManager->getClassMetadataFactory();
+
 		/** @var \Doctrine\Search\Mapping\ClassMetadata[] $classes */
-		$classes = $this->searchManager->getClassMetadataFactory()->getAllMetadata();
+		if ($onlyEntity = $input->getOption('entity')) {
+			$classes = [$metaFactory->getMetadataFor($onlyEntity)];
+
+		} else {
+			$classes = $metaFactory->getAllMetadata();
+		}
 
 		/** @var ProgressBar $progress */
 		$progress = NULL;
