@@ -10,6 +10,7 @@
 
 namespace Kdyby\DoctrineSearch;
 
+use Doctrine\Search\EntityRiver;
 use Doctrine\Search\Mapping\ClassMetadata;
 use Doctrine\Search\SearchManager;
 use Kdyby;
@@ -37,81 +38,56 @@ class EntityPiper extends Nette\Object
 	public $onItemsIndexed = array();
 
 	/**
-	 * @var SearchManager
-	 */
-	private $searchManager;
-
-	/**
 	 * @var Kdyby\Doctrine\EntityManager
 	 */
 	private $entityManager;
 
+	/**
+	 * @var Nette\DI\Container
+	 */
+	private $serviceLocator;
 
 
-	public function __construct(SearchManager $searchManager, Kdyby\Doctrine\EntityManager $entityManager)
+
+	public function __construct(Kdyby\Doctrine\EntityManager $entityManager, Nette\DI\Container $serviceLocator)
 	{
-		$this->searchManager = $searchManager;
 		$this->entityManager = $entityManager;
+		$this->serviceLocator = $serviceLocator;
 	}
 
 
 
 	public function indexEntities(ClassMetadata $searchMeta)
 	{
-		$class = $this->entityManager->getClassMetadata($searchMeta->getName());
-		$repository = $this->entityManager->getRepository($searchMeta->getName());
+		if ($searchMeta->riverImplementation) {
+			$river = $this->serviceLocator->getByType($searchMeta->riverImplementation);
+
+		} else {
+			$river = $this->serviceLocator->getByType('Kdyby\DoctrineSearch\River\DefaultEntityRiver');
+		}
+
+		if (!$river instanceof EntityRiver) {
+			throw new UnexpectedValueException('The river must implement Doctrine\Search\EntityRiver.');
+		}
+
+		if (property_exists($river, 'onIndexStart')) {
+			$river->onIndexStart[] = function ($self, $paginator) {
+				$this->onIndexStart($this, $paginator);
+			};
+		}
+
+		if (property_exists($river, 'onItemsIndexed')) {
+			$river->onItemsIndexed[] = function ($self, $entities) {
+				$this->onItemsIndexed($this, $entities);
+			};
+		}
 
 		// disable logger
 		$config = $this->entityManager->getConfiguration();
 		$oldLogger = $config->getSQLLogger();
 		$config->setSQLLogger(NULL);
 
-		$qb = $repository->createQueryBuilder('e');
-
-		$i = 0;
-		foreach ($class->getAssociationMappings() as $assocMapping) {
-			if (!$class->isSingleValuedAssociation($assocMapping['fieldName'])) {
-				continue;
-			}
-
-			$targetClass = $this->entityManager->getClassMetadata($assocMapping['targetEntity']);
-
-			$alias = substr($assocMapping['fieldName'], 0, 1) . ($i++);
-			$qb->leftJoin('e.' . $assocMapping['fieldName'], $alias)->addSelect($alias);
-
-			// todo: deeper!
-		}
-
-		$countQuery = $repository->createQueryBuilder('e')
-			->select('COUNT(e)')
-			->getQuery();
-
-		$paginator = new Nette\Utils\Paginator();
-		$paginator->itemsPerPage = 100;
-		$paginator->itemCount = $countQuery->getSingleScalarResult();
-
-		$this->onIndexStart($this, $paginator);
-
-		$query = $qb->getQuery()->setMaxResults($paginator->getLength());
-		while (1) {
-			$entities = $query->setFirstResult($paginator->getOffset())->getResult();
-
-			$this->searchManager->persist($entities);
-			$this->searchManager->flush();
-			$this->searchManager->clear();
-
-			try {
-				$this->onItemsIndexed($this, $entities);
-			} catch (\Exception $e) {}
-
-			$this->entityManager->clear();
-
-			if ($paginator->isLast()) {
-				break;
-			}
-
-			$paginator->page += 1;
-		}
+		$river->transfuse($searchMeta);
 
 		$config->setSQLLogger($oldLogger);
 	}
