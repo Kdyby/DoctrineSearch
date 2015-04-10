@@ -135,8 +135,7 @@ class DefaultEntityRiver extends Nette\Object implements EntityRiver
 	 */
 	protected function buildSelectForUpdateQuery(EntityRepository $repository, ORMMetadata $class)
 	{
-		$qb = $repository->createQueryBuilder('e')
-			->andWhere('e.id = 1289711');
+		$qb = $repository->createQueryBuilder('e');
 
 		$i = 0;
 		foreach ($class->getAssociationMappings() as $assocMapping) {
@@ -164,8 +163,7 @@ class DefaultEntityRiver extends Nette\Object implements EntityRiver
 	protected function buildCountForUpdateQuery(EntityRepository $repository)
 	{
 		$countQuery = $repository->createQueryBuilder('e')
-			->select('COUNT(e)')
-			->andWhere('e.id = 1289711');
+			->select('COUNT(e)');
 
 		return $countQuery;
 	}

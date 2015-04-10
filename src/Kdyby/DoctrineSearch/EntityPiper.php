@@ -63,7 +63,7 @@ class EntityPiper extends Nette\Object
 			$river = $this->serviceLocator->getByType($searchMeta->riverImplementation);
 
 		} else {
-			$river = $this->serviceLocator->getByType('Kdyby\DoctrineSearch\River\DefaultEntityRiver');
+			$river = $this->serviceLocator->createInstance('Kdyby\DoctrineSearch\River\DefaultEntityRiver');
 		}
 
 		if (!$river instanceof EntityRiver) {
