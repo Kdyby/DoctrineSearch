@@ -23,7 +23,7 @@ use Nette;
 /**
  * @author Filip Procházka <filip@prochazka.su>
  *
- * @method onIndexStart(DefaultEntityRiver $self, Nette\Utils\Paginator $paginator)
+ * @method onIndexStart(DefaultEntityRiver $self, Nette\Utils\Paginator $paginator, ORMMetadata $class)
  * @method onItemsIndexed(DefaultEntityRiver $self, array $entities)
  */
 class DefaultEntityRiver extends Nette\Object implements EntityRiver
@@ -78,7 +78,7 @@ class DefaultEntityRiver extends Nette\Object implements EntityRiver
 		$countQuery = $this->buildCountForUpdateQuery($repository)->getQuery();
 		$paginator->itemCount = $countQuery->getSingleScalarResult();
 
-		$this->onIndexStart($this, $paginator);
+		$this->onIndexStart($this, $paginator, $class);
 
 		$qb = $this->buildSelectForUpdateQuery($repository, $class);
 		$query = $qb->getQuery()->setMaxResults($paginator->getLength());

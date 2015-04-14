@@ -10,8 +10,8 @@
 
 namespace Kdyby\DoctrineSearch\Console;
 
-use Doctrine\ORM\Mapping\ClassMetadata;
-use Doctrine\ORM\Tools\Pagination\Paginator;
+use Doctrine\ORM\Mapping\ClassMetadata as ORMMetadata;
+use Doctrine\Search\EntityRiver;
 use Kdyby;
 use Nette;
 use Symfony\Component\Console\Command\Command;
@@ -68,7 +68,9 @@ class PipeEntitiesCommand extends Command
 
 		/** @var ProgressBar $progress */
 		$progress = NULL;
-		$this->entityPiper->onIndexStart[] = function ($ep, Nette\Utils\Paginator $paginator) use ($output, &$progress) {
+		$this->entityPiper->onIndexStart[] = function ($ep, Nette\Utils\Paginator $paginator, EntityRiver $river, ORMMetadata $class) use ($output, &$progress) {
+			$output->writeln(sprintf('Indexing <info>%s</info> using <info>%s</info>', $class->getName(), get_class($river)));
+
 			$progress = new ProgressBar($output, $paginator->getItemCount());
 			$progress->setFormat($progress::getFormatDefinition('debug'));
 			$progress->start();
@@ -86,7 +88,6 @@ class PipeEntitiesCommand extends Command
 
 		foreach ($classes as $class) {
 			$output->writeln('');
-			$output->writeln(sprintf('Indexing <info>%s</info>', $class->getName()));
 
 			if (isset($aliases[$class->getIndexName()])) {
 				$output->writeln(sprintf('Redirecting data from <info>%s</info> to <info>%s</info>', $class->getIndexName(), $aliases[$class->getIndexName()]));

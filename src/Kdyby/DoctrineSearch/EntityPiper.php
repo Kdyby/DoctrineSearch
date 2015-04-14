@@ -12,7 +12,7 @@ namespace Kdyby\DoctrineSearch;
 
 use Doctrine\Search\EntityRiver;
 use Doctrine\Search\Mapping\ClassMetadata;
-use Doctrine\Search\SearchManager;
+use Doctrine\ORM\Mapping\ClassMetadata as ORMMetadata;
 use Kdyby;
 use Nette;
 
@@ -21,7 +21,7 @@ use Nette;
 /**
  * @author Filip Procházka <filip@prochazka.su>
  *
- * @method onIndexStart(EntityPiper $self, Nette\Utils\Paginator $paginator)
+ * @method onIndexStart(EntityPiper $self, Nette\Utils\Paginator $paginator, EntityRiver $river, ORMMetadata $class)
  * @method onItemsIndexed(EntityPiper $self, array $entities)
  */
 class EntityPiper extends Nette\Object
@@ -63,6 +63,7 @@ class EntityPiper extends Nette\Object
 			$river = $this->serviceLocator->getByType($searchMeta->riverImplementation);
 
 		} else {
+			/** @var River\DefaultEntityRiver $river */
 			$river = $this->serviceLocator->createInstance('Kdyby\DoctrineSearch\River\DefaultEntityRiver');
 		}
 
@@ -71,8 +72,8 @@ class EntityPiper extends Nette\Object
 		}
 
 		if (property_exists($river, 'onIndexStart')) {
-			$river->onIndexStart[] = function ($self, $paginator) {
-				$this->onIndexStart($this, $paginator);
+			$river->onIndexStart[] = function (EntityRiver $river, $paginator, ORMMetadata $class) {
+				$this->onIndexStart($this, $paginator, $river, $class);
 			};
 		}
 
