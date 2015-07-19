@@ -44,6 +44,7 @@ class DoctrineSearchExtension extends Nette\DI\CompilerExtension
 		'defaultSerializer' => 'callback',
 		'serializers' => array(),
 		'metadata' => array(),
+		'indexPrefix' => NULL,
 		'debugger' => '%debugMode%',
 	);
 
@@ -57,7 +58,8 @@ class DoctrineSearchExtension extends Nette\DI\CompilerExtension
 		$configuration = $builder->addDefinition($this->prefix('config'))
 			->setClass('Doctrine\Search\Configuration')
 			->addSetup('setMetadataCacheImpl', array(CacheHelpers::processCache($this, $config['metadataCache'], 'metadata', $config['debugger'])))
-			->addSetup('setObjectManager', array('@Doctrine\\ORM\\EntityManager'));
+			->addSetup('setObjectManager', array('@Doctrine\\ORM\\EntityManager'))
+			->addSetup('setIndexPrefix', array($config['indexPrefix']));
 
 		$this->loadSerializer($config);
 		$configuration->addSetup('setEntitySerializer', array($this->prefix('@serializer')));
