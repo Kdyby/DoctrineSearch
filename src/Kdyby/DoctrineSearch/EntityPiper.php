@@ -13,6 +13,7 @@ namespace Kdyby\DoctrineSearch;
 use Doctrine\Search\EntityRiver;
 use Doctrine\Search\Mapping\ClassMetadata;
 use Doctrine\ORM\Mapping\ClassMetadata as ORMMetadata;
+use Doctrine\Search\SearchManager;
 use Kdyby;
 use Nette;
 
@@ -23,6 +24,7 @@ use Nette;
  *
  * @method onIndexStart(EntityPiper $self, Nette\Utils\Paginator $paginator, EntityRiver $river, ORMMetadata $class)
  * @method onItemsIndexed(EntityPiper $self, array $entities)
+ * @method onChildSkipped(EntityPiper $self, ClassMetadata $meta, ClassMetadata $parentMeta)
  */
 class EntityPiper extends Nette\Object
 {
@@ -38,9 +40,19 @@ class EntityPiper extends Nette\Object
 	public $onItemsIndexed = array();
 
 	/**
+	 * @var array
+	 */
+	public $onChildSkipped = array();
+
+	/**
 	 * @var Kdyby\Doctrine\EntityManager
 	 */
 	private $entityManager;
+
+	/**
+	 * @var SearchManager
+	 */
+	private $searchManager;
 
 	/**
 	 * @var Nette\DI\Container
@@ -49,9 +61,10 @@ class EntityPiper extends Nette\Object
 
 
 
-	public function __construct(Kdyby\Doctrine\EntityManager $entityManager, Nette\DI\Container $serviceLocator)
+	public function __construct(Kdyby\Doctrine\EntityManager $entityManager, SearchManager $searchManager, Nette\DI\Container $serviceLocator)
 	{
 		$this->entityManager = $entityManager;
+		$this->searchManager = $searchManager;
 		$this->serviceLocator = $serviceLocator;
 	}
 
@@ -59,6 +72,17 @@ class EntityPiper extends Nette\Object
 
 	public function indexEntities(ClassMetadata $searchMeta)
 	{
+		foreach ($this->searchManager->getMetadataFactory()->getAllMetadata() as $otherMeta) {
+			if ($searchMeta->className === $otherMeta->className) {
+				continue;
+			}
+
+			if (is_subclass_of($searchMeta->className, $otherMeta->className)) {
+				$this->onChildSkipped($this, $searchMeta, $otherMeta);
+				return;
+			}
+		}
+
 		if ($searchMeta->riverImplementation) {
 			$river = $this->serviceLocator->getByType($searchMeta->riverImplementation);
 

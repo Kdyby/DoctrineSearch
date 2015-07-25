@@ -12,6 +12,7 @@ namespace Kdyby\DoctrineSearch\Console;
 
 use Doctrine\ORM\Mapping\ClassMetadata as ORMMetadata;
 use Doctrine\Search\EntityRiver;
+use Doctrine\Search\Mapping\ClassMetadata;
 use Kdyby;
 use Nette;
 use Symfony\Component\Console\Command\Command;
@@ -79,6 +80,11 @@ class PipeEntitiesCommand extends Command
 			$progress->advance(count($entities));
 		};
 
+		$this->entityPiper->onChildSkipped[] = function ($ep, ClassMetadata $meta, ClassMetadata $parent) use ($output, &$progress) {
+			$output->writeln(sprintf('<info>%s</info> is a subclass of <info>%s</info> (being piped into <info>%s</info> type), ignoring.', $meta->className, $parent->className, $parent->type->name));
+			$progress = NULL;
+		};
+
 		$aliases = array(/* original => alias */);
 		$indexAliases = $input->getArgument('index-aliases');
 		foreach ($indexAliases as $tmp) {
@@ -109,7 +115,9 @@ class PipeEntitiesCommand extends Command
 				throw $e;
 			}
 
-			$progress->finish();
+			if ($progress !== NULL) {
+				$progress->finish();
+			}
 			$output->writeln('');
 		}
 	}
