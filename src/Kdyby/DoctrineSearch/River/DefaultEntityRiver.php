@@ -85,6 +85,8 @@ class DefaultEntityRiver extends Nette\Object implements EntityRiver
 		while (1) {
 			$entities = $query->setFirstResult($paginator->getOffset())->getResult();
 
+			$this->postFetch($entities, $repository, $class);
+
 			$this->doPersistEntities($entities);
 
 			$this->searchManager->flush();
@@ -166,6 +168,13 @@ class DefaultEntityRiver extends Nette\Object implements EntityRiver
 			->select('COUNT(e)');
 
 		return $countQuery;
+	}
+
+
+
+	protected function postFetch(array $entities, EntityRepository $repository, ORMMetadata $class)
+	{
+
 	}
 
 }
