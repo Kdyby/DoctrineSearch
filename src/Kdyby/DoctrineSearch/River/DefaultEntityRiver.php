@@ -137,7 +137,7 @@ class DefaultEntityRiver extends Nette\Object implements EntityRiver
 	 */
 	protected function buildSelectForUpdateQuery(EntityRepository $repository, ORMMetadata $class)
 	{
-		$qb = $repository->createQueryBuilder('e');
+		$qb = $repository->createQueryBuilder('e', 'e.id');
 
 		$i = 0;
 		foreach ($class->getAssociationMappings() as $assocMapping) {
