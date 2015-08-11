@@ -73,7 +73,7 @@ class DefaultEntityRiver extends Nette\Object implements EntityRiver
 	protected function createAndUpdate(ORMMetadata $class, EntityRepository $repository)
 	{
 		$paginator = new Nette\Utils\Paginator();
-		$paginator->itemsPerPage = 1024;
+		$paginator->itemsPerPage = 1000;
 
 		$countQuery = $this->buildCountForUpdateQuery($repository)->getQuery();
 		$paginator->itemCount = $countQuery->getSingleScalarResult();
