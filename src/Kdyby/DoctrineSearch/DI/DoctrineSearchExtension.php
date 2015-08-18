@@ -158,13 +158,19 @@ class DoctrineSearchExtension extends Nette\DI\CompilerExtension
 			->addSetup('setDefaultSerializer', array($serializer));
 
 		foreach ($config['serializers'] as $type => $impl) {
-			$args = Nette\DI\Compiler::filterArguments(array(is_string($impl) ? new Nette\DI\Statement($impl) : $impl));
-			$builder->addDefinition($this->prefix($name = 'serializer.' . str_replace('\\', '_', $type)))
-				->setFactory($args[0]->entity, $args[0]->arguments)
-				->setClass((is_string($args[0]->entity) && class_exists($args[0]->entity)) ? $args[0]->entity : 'Doctrine\Search\SerializerInterface')
-				->setAutowired(FALSE);
+			$impl = self::filterArgs($impl);
 
-			$serializer->addSetup('addSerializer', array($type, $this->prefix('@' . $name)));
+			if (is_string($impl->entity) && substr($impl->entity, 0, 1) === '@') {
+				$serializer->addSetup('addSerializer', array($type, $impl->entity));
+
+			} else {
+				$builder->addDefinition($this->prefix($name = 'serializer.' . str_replace('\\', '_', $type)))
+					->setFactory($impl->entity, $impl->arguments)
+					->setClass((is_string($impl->entity) && class_exists($impl->entity)) ? $impl->entity : 'Doctrine\Search\SerializerInterface')
+					->setAutowired(FALSE);
+
+				$serializer->addSetup('addSerializer', array($type, $this->prefix('@' . $name)));
+			}
 		}
 	}
 
@@ -185,6 +191,18 @@ class DoctrineSearchExtension extends Nette\DI\CompilerExtension
 		$builder->addDefinition($this->prefix('console.info'))
 			->setClass('Kdyby\DoctrineSearch\Console\InfoCommand')
 			->addTag('kdyby.console.command');
+	}
+
+
+
+	/**
+	 * @param string|Nette\DI\Statement $statement
+	 * @return Nette\DI\Statement
+	 */
+	private static function filterArgs($statement)
+	{
+		$args = Nette\DI\Compiler::filterArguments(array(is_string($statement) ? new Nette\DI\Statement($statement) : $statement));
+		return $args[0];
 	}
 
 
