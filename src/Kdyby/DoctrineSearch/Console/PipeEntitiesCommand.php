@@ -72,6 +72,11 @@ class PipeEntitiesCommand extends Command
 		$this->entityPiper->onIndexStart[] = function ($ep, Nette\Utils\Paginator $paginator, EntityRiver $river, ORMMetadata $class) use ($output, &$progress) {
 			$output->writeln(sprintf('Indexing <info>%s</info> using <info>%s</info>', $class->getName(), get_class($river)));
 
+			if ($paginator->getItemCount() <= 0) {
+				$output->writeln(" 0/0 River didn't return any results");
+				return;
+			};
+
 			$progress = new ProgressBar($output, $paginator->getItemCount());
 			$progress->setFormat($progress::getFormatDefinition('debug'));
 			$progress->start();

@@ -80,6 +80,10 @@ class DefaultEntityRiver extends Nette\Object implements EntityRiver
 
 		$this->onIndexStart($this, $paginator, $class);
 
+		if ($paginator->itemCount <= 0) {
+			return;
+		}
+
 		$qb = $this->buildSelectForUpdateQuery($repository, $class);
 		$query = $qb->getQuery()->setMaxResults($paginator->getLength());
 		while (1) {
