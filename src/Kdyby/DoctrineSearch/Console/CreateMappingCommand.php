@@ -78,6 +78,14 @@ class CreateMappingCommand extends Command
 		$this->schema->onAliasError[] = function ($sm, ResponseException $e, $original, $alias) use ($output) {
 			$output->writeln(sprintf('<error>%s</error>', $e->getMessage()));
 		};
+
+		/** @var \Doctrine\Search\ElasticSearch\Client $searchClient */
+		$searchClient = $this->searchManager->getClient();
+
+		/** @var Kdyby\ElasticSearch\Client $apiClient */
+		$apiClient = $searchClient->getClient();
+		$apiClient->onError = [];
+		$apiClient->onSuccess = [];
 	}
 
 

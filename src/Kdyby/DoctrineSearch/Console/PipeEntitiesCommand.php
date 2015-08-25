@@ -55,6 +55,21 @@ class PipeEntitiesCommand extends Command
 
 
 
+	protected function initialize(InputInterface $input, OutputInterface $output)
+	{
+		parent::initialize($input, $output);
+
+		/** @var \Doctrine\Search\ElasticSearch\Client $searchClient */
+		$searchClient = $this->searchManager->getClient();
+
+		/** @var Kdyby\ElasticSearch\Client $apiClient */
+		$apiClient = $searchClient->getClient();
+		$apiClient->onError = [];
+		$apiClient->onSuccess = [];
+	}
+
+
+
 	protected function execute(InputInterface $input, OutputInterface $output)
 	{
 		$metaFactory = $this->searchManager->getClassMetadataFactory();
