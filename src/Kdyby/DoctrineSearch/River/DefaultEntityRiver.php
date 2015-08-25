@@ -85,10 +85,28 @@ class DefaultEntityRiver extends Nette\Object implements EntityRiver
 		}
 
 		$qb = $this->buildSelectForUpdateQuery($repository, $class);
-		$query = $qb->getQuery()->setMaxResults($paginator->getLength());
-		while (1) {
-			$entities = $query->setFirstResult($paginator->getOffset())->getResult();
+		if ($identifier = $class->getSingleIdentifierColumnName()) {
+			$qb->orderBy(sprintf('e.%s', $identifier), 'ASC');
+		}
 
+		$lastId = NULL;
+		$selectQueryBuilder = $qb->setMaxResults($paginator->getLength());
+		while (1) {
+			if ($lastId !== NULL) {
+				$qbCopy = clone $selectQueryBuilder;
+				$query = $qbCopy
+					->andWhere(sprintf('e.%s > :lastId', $identifier))
+					->setParameter('lastId', $lastId)
+					->getQuery();
+
+			} else {
+				$query = $selectQueryBuilder->getQuery();
+				if (!$identifier) {
+					$query->setFirstResult($paginator->getOffset());
+				}
+			}
+
+			$entities = $query->getResult();
 			$this->postFetch($entities, $repository, $class);
 
 			$this->doPersistEntities($entities);
@@ -99,6 +117,14 @@ class DefaultEntityRiver extends Nette\Object implements EntityRiver
 			try {
 				$this->onItemsIndexed($this, $entities);
 			} catch (\Exception $e) {
+			}
+
+			if ($identifier) {
+				$lastIdentifier = $class->getIdentifierValues(end($entities));  // [id => value]
+				$lastId = reset($lastIdentifier);
+				if (!is_numeric($lastId)) {
+					trigger_error(E_USER_WARNING, 'Expected numeric identifier');
+				}
 			}
 
 			$this->entityManager->clear();
