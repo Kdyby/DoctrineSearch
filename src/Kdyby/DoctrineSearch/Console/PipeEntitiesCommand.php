@@ -102,7 +102,7 @@ class PipeEntitiesCommand extends Command
 				if ($time < 10) {
 					return number_format($time * 1000, 6, '.', '') . ' ms';
 				} else {
-					return number_format(1000, 2, '.', '') . ' s';
+					return number_format($time, 2, '.', '') . ' s';
 				}
 			};
 			$output->writeln(sprintf(" ... Loading data took %s, indexing took %s", $format($timeToRead), $format($timeToIndex)));
