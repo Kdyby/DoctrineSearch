@@ -22,8 +22,9 @@ use Nette;
 
 /**
  * @author Filip Procházka <filip@prochazka.su>
- *
+
  * @method onIndexStart(DefaultEntityRiver $self, Nette\Utils\Paginator $paginator, ORMMetadata $class)
+ * @method onIndexStats(DefaultEntityRiver $self, ORMMetadata $class, int $timeToIndex, int $timeToRead)
  * @method onItemsIndexed(DefaultEntityRiver $self, array $entities)
  */
 class DefaultEntityRiver extends Nette\Object implements EntityRiver
@@ -33,6 +34,11 @@ class DefaultEntityRiver extends Nette\Object implements EntityRiver
 	 * @var array
 	 */
 	public $onIndexStart = array();
+
+	/**
+	 * @var array
+	 */
+	public $onIndexStats = array();
 
 	/**
 	 * @var array
@@ -106,8 +112,12 @@ class DefaultEntityRiver extends Nette\Object implements EntityRiver
 				}
 			}
 
+			$beginTime = microtime(TRUE);
+
 			$entities = $query->getResult();
 			$this->postFetch($entities, $repository, $class);
+
+			$loadedTime = microtime(TRUE);
 
 			$this->doPersistEntities($entities);
 
@@ -128,6 +138,8 @@ class DefaultEntityRiver extends Nette\Object implements EntityRiver
 			}
 
 			$this->entityManager->clear();
+
+			$this->onIndexStats($this, $class, microtime(TRUE) - $loadedTime, $loadedTime - $beginTime);
 
 			if ($paginator->isLast()) {
 				break;

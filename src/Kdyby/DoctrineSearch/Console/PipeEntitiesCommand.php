@@ -47,8 +47,9 @@ class PipeEntitiesCommand extends Command
 	protected function configure()
 	{
 		$this->setName('elastica:pipe-entities')
-			->addOption('entity', 'e', InputOption::VALUE_OPTIONAL, "Synchronizes only specified entity")
-			->addArgument('index-aliases', InputArgument::IS_ARRAY, "Alias map of alias=original for indexes");
+			->addOption('entity', 'e', InputOption::VALUE_OPTIONAL, 'Synchronizes only specified entity')
+			->addOption('stats', NULL, InputOption::VALUE_NONE, 'Show stats of progress')
+			->addArgument('index-aliases', InputArgument::IS_ARRAY, 'Alias map of alias=original for indexes');
 
 		// todo: filter types, ...
 	}
@@ -96,10 +97,19 @@ class PipeEntitiesCommand extends Command
 			$progress->setFormat($progress::getFormatDefinition('debug'));
 			$progress->start();
 		};
+		$this->entityPiper->onIndexStats[] = function ($ep, ORMMetadata $meta, $timeToIndex, $timeToRead) use ($output) {
+			$format = function ($time) {
+				if ($time < 10) {
+					return number_format($time * 1000, 6, '.', '') . ' ms';
+				} else {
+					return number_format(1000, 2, '.', '') . ' s';
+				}
+			};
+			$output->writeln(sprintf(" ... Loading data took %s, indexing took %s", $format($timeToRead), $format($timeToIndex)));
+		};
 		$this->entityPiper->onItemsIndexed[] = function ($ep, $entities) use ($output, &$progress) {
 			$progress->advance(count($entities));
 		};
-
 		$this->entityPiper->onChildSkipped[] = function ($ep, ClassMetadata $meta, ClassMetadata $parent) use ($output, &$progress) {
 			$output->writeln(sprintf('<info>%s</info> is a subclass of <info>%s</info> (being piped into <info>%s</info> type), ignoring.', $meta->className, $parent->className, $parent->type->name));
 			$progress = NULL;

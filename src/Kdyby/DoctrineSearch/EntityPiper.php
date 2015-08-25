@@ -21,8 +21,9 @@ use Nette;
 
 /**
  * @author Filip Procházka <filip@prochazka.su>
- *
+
  * @method onIndexStart(EntityPiper $self, Nette\Utils\Paginator $paginator, EntityRiver $river, ORMMetadata $class)
+ * @method onIndexStats(EntityPiper $self, ORMMetadata $class, int $timeToIndex, int $timeToRead)
  * @method onItemsIndexed(EntityPiper $self, array $entities)
  * @method onChildSkipped(EntityPiper $self, ClassMetadata $meta, ClassMetadata $parentMeta)
  */
@@ -33,6 +34,11 @@ class EntityPiper extends Nette\Object
 	 * @var array
 	 */
 	public $onIndexStart = array();
+
+	/**
+	 * @var array
+	 */
+	public $onIndexStats = array();
 
 	/**
 	 * @var array
@@ -104,6 +110,12 @@ class EntityPiper extends Nette\Object
 		if (property_exists($river, 'onItemsIndexed')) {
 			$river->onItemsIndexed[] = function ($self, $entities) {
 				$this->onItemsIndexed($this, $entities);
+			};
+		}
+
+		if (property_exists($river, 'onIndexStats')) {
+			$river->onIndexStats[] = function ($self, ORMMetadata $class, $timeToIndex, $timeToRead) {
+				$this->onIndexStats($this, $class, $timeToIndex, $timeToRead);
 			};
 		}
 
