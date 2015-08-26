@@ -97,7 +97,11 @@ class PipeEntitiesCommand extends Command
 			$progress->setFormat($progress::getFormatDefinition('debug'));
 			$progress->start();
 		};
-		$this->entityPiper->onIndexStats[] = function ($ep, ORMMetadata $meta, $timeToIndex, $timeToRead) use ($output) {
+		$this->entityPiper->onIndexStats[] = function ($ep, ORMMetadata $meta, $timeToIndex, $timeToRead) use ($input, $output) {
+			if (!$input->getOption('stats')) {
+				return;
+			}
+
 			$format = function ($time) {
 				if ($time < 10) {
 					return number_format($time * 1000, 6, '.', '') . ' ms';
