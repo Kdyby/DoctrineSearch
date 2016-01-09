@@ -4,6 +4,7 @@ Kdyby/DoctrineSearch
 [![Build Status](https://travis-ci.org/Kdyby/DoctrineSearch.svg?branch=master)](https://travis-ci.org/Kdyby/DoctrineSearch)
 [![Downloads this Month](https://img.shields.io/packagist/dm/kdyby/doctrine-search.svg)](https://packagist.org/packages/kdyby/doctrine-search)
 [![Latest stable](https://img.shields.io/packagist/v/kdyby/doctrine-search.svg)](https://packagist.org/packages/kdyby/doctrine-search)
+[![Join the chat at https://gitter.im/Kdyby/Help](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/Kdyby/Help)
 
 
 Requirements
