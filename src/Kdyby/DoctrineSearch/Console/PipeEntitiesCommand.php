@@ -126,12 +126,17 @@ class PipeEntitiesCommand extends Command
 			$aliases[$original] = $alias;
 		}
 
+		foreach ($classes as $class) { //subclass bug
+			if (isset($aliases[$class->getIndexName()])) {
+				$class->index->name = $aliases[$class->getIndexName()];
+			}
+		}
+
 		foreach ($classes as $class) {
 			$output->writeln('');
 
-			if (isset($aliases[$class->getIndexName()])) {
-				$output->writeln(sprintf('Redirecting data from <info>%s</info> to <info>%s</info>', $class->getIndexName(), $aliases[$class->getIndexName()]));
-				$class->index->name = $aliases[$class->getIndexName()];
+			if ($old = array_search($class->getIndexName(), $aliases, TRUE)) {
+				$output->writeln(sprintf('Redirecting data from <info>%s</info> to <info>%s</info>', $old, $class->getIndexName()));
 			}
 
 			unset($e);
@@ -140,12 +145,12 @@ class PipeEntitiesCommand extends Command
 
 			} catch (\Exception $e) { }
 
-			// fix the metadata
-			if ($old = array_search($class->getIndexName(), $aliases, TRUE)) {
-				$class->index->name = $old;
-			}
-
 			if (isset($e)) {
+				// fix the metadata
+				if ($old = array_search($class->getIndexName(), $aliases, TRUE)) {
+					$class->index->name = $old;
+				}
+
 				throw $e;
 			}
 
@@ -153,6 +158,13 @@ class PipeEntitiesCommand extends Command
 				$progress->finish();
 			}
 			$output->writeln('');
+		}
+
+		foreach ($classes as $class) { //subclass bug
+			// fix the metadata
+			if ($old = array_search($class->getIndexName(), $aliases, TRUE)) {
+				$class->index->name = $old;
+			}
 		}
 	}
 
