@@ -76,6 +76,7 @@ class PipeEntitiesCommand extends Command
 		$metaFactory = $this->searchManager->getClassMetadataFactory();
 
 		/** @var \Doctrine\Search\Mapping\ClassMetadata[] $classes */
+		$allClassesForIndex = $metaFactory->getAllMetadata();
 		if ($onlyEntity = $input->getOption('entity')) {
 			$classes = [$metaFactory->getMetadataFor($onlyEntity)];
 
@@ -126,7 +127,7 @@ class PipeEntitiesCommand extends Command
 			$aliases[$original] = $alias;
 		}
 
-		foreach ($classes as $class) { //subclass bug
+		foreach ($allClassesForIndex as $class) { //subclass bug
 			if (isset($aliases[$class->getIndexName()])) {
 				$class->index->name = $aliases[$class->getIndexName()];
 			}
@@ -160,7 +161,7 @@ class PipeEntitiesCommand extends Command
 			$output->writeln('');
 		}
 
-		foreach ($classes as $class) { //subclass bug
+		foreach ($allClassesForIndex as $class) { //subclass bug
 			// fix the metadata
 			if ($old = array_search($class->getIndexName(), $aliases, TRUE)) {
 				$class->index->name = $old;
